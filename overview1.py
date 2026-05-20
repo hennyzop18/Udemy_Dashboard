@@ -1197,19 +1197,10 @@ elif page == "Khóa học":
     st.write("") # Tạo khoảng cách
 
     # --- HÀNG 2: BIỂU ĐỒ THỐNG KÊ ---
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
 
     with c1:
-        st.markdown("##### 📐 Sự phân bổ nguồn lực đào tạo theo cấp độ chuyên môn")
-        lvl_sub_data = df_f.groupby(['level', 'subject']).size().reset_index(name='count')
-        fig1 = px.bar(lvl_sub_data, x='level', y='count', color='subject', barmode='group',
-                      color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig1.update_traces(marker=dict(line=dict(width=0)))
-        fig1.update_layout(height=300, showlegend=False, margin=dict(t=10, b=10, l=0, r=0), template='plotly_white', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig1, use_container_width=True)
-
-    with c2:
-        st.markdown("##### 🎯 Chúng ta đang 'bỏ quên' học viên ở trình độ nào?")
+        st.markdown("##### 🎯 Ma trận phân bổ Chủ đề × Trình độ")
         heat_data = df_f.groupby(['subject', 'level'])['course_id'].count().reset_index(name='count')
         heat_pivot = heat_data.pivot(index='subject', columns='level', values='count').fillna(0)
         # Sắp xếp cột theo thứ tự hợp lý
@@ -1236,14 +1227,31 @@ elif page == "Khóa học":
         )
         st.plotly_chart(fig_heat, use_container_width=True)
 
-    with c3:
-        st.markdown("##### 🚀 Bức tranh tăng trưởng: Xu hướng phát triển qua thời gian")
-        growth_data = df_f.groupby(['year', 'subject']).size().reset_index(name='count')
-        fig3 = px.area(growth_data, x='year', y='count', color='subject',
-                       color_discrete_sequence=px.colors.qualitative.Pastel)
-        fig3.update_traces(line=dict(width=2))
-        fig3.update_layout(height=300, showlegend=False, margin=dict(t=10, b=10, l=0, r=0), template='plotly_white', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig3, use_container_width=True)
+    with c2:
+        st.markdown("##### 💲 Phân bổ giá khóa học theo Chủ đề")
+        # Chỉ lấy khóa học trả phí để box plot hiển thị phân bổ giá có ý nghĩa
+        paid_only = df_f[df_f['price'] > 0]
+        if not paid_only.empty:
+            fig3 = px.box(
+                paid_only,
+                x='subject',
+                y='price',
+                color='subject',
+                color_discrete_sequence=['#7184fc', '#fc970f', '#66ce7e', '#68c9fe', '#f472b6']
+            )
+            fig3.update_traces(marker=dict(size=3, opacity=0.6), line=dict(width=1.5))
+            fig3.update_layout(
+                height=300,
+                showlegend=False,
+                margin=dict(t=20, b=10, l=0, r=0),
+                template='plotly_white',
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                xaxis=dict(title=None, tickfont=dict(size=10)),
+                yaxis=dict(title='Mức giá ($)', tickformat='$,.0f', gridcolor='#f1f5f9')
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+        else:
+            st.info("Không có khóa học trả phí trong phân đoạn này.")
 
     # --- DASHBOARD: SEASONALITY & TIMING ---
     st.markdown("---")
@@ -1258,7 +1266,7 @@ elif page == "Khóa học":
     s1, s2, s3 = st.columns(3)
 
     with s1:
-        st.markdown("##### 📅 Tháng nào các giảng viên đua nhau ra mắt khóa học mới?")
+        st.markdown("##### 📅 Số lượng khóa học xuất bản theo tháng")
         month_count = df_f.groupby('month')['course_id'].count().reset_index()
         month_count['label'] = month_count['month'].map(month_names)
         fig_month = go.Figure()
@@ -1279,7 +1287,7 @@ elif page == "Khóa học":
         st.plotly_chart(fig_month, use_container_width=True)
 
     with s2:
-        st.markdown("##### 🍂 Ra mắt vào mùa nào thì dễ 'hốt' học viên nhất?")
+        st.markdown("##### 🍂 Trung bình học viên đăng ký theo tháng")
         month_subs = df_f.groupby('month')['num_subscribers'].mean().reset_index()
         month_subs['label'] = month_subs['month'].map(month_names)
         fig_season = go.Figure()
@@ -1300,7 +1308,7 @@ elif page == "Khóa học":
         st.plotly_chart(fig_season, use_container_width=True)
 
     with s3:
-        st.markdown("##### 📆 Đăng khóa học vào cuối tuần hay đầu tuần thì tốt hơn?")
+        st.markdown("##### 📆 Phân bổ ngày xuất bản trong tuần")
         wd_count = df_f.groupby('weekday')['course_id'].count().reset_index()
         wd_count['order'] = wd_count['weekday'].map({d: i for i, d in enumerate(weekday_order)})
         wd_count = wd_count.sort_values('order', ascending=False)
